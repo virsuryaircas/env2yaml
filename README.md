@@ -1,10 +1,10 @@
 # ENV2YAML
 
-Convert `.env` variables into Kubernetes YAML instantly in the browser.
+Convert `.env` files into Kubernetes `ConfigMap` or `Secret` YAML directly from your terminal.
 
 ## Screenshot
 
-![ENV2YAML Screenshot](https://raw.githubusercontent.com/virsuryaircas/env2yaml/main/en2yaml-screenshot.png)
+![ENV2YAML Screenshot](https://raw.githubusercontent.com/virsuryaircas/env2yaml/cli/en2yaml-sh-screenshot.png)
 
 Generate:
 - ConfigMap YAML
@@ -12,36 +12,16 @@ Generate:
 
 ## Features
 
-- Pure frontend tool
-- Runs completely in browser
-- Nothing sent to any server
+- Interactive terminal UI
+- Zero dependencies
+- Custom Name & Namespace
 - Kubernetes-ready output
-- Copy to clipboard support
+- Save time
 
-## Live Tool
+## Usage
 
-👉 https://virsuryaircas.github.io/env2yaml/
-
-## Example
-
-### Input
-```env
-APP_NAME=my-awesome-app
-APP_ENV=production
-APP_PORT=8080
-DEBUG=false
-```
-
-### Output
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: my-app-config
-  namespace: production
-data:
-  APP_NAME: "my-awesome-app"
-  APP_ENV: production
-  APP_PORT: "8080"
-  DEBUG: "false"
+```bash
+git clone https://github.com/virsuryaircas/env2yaml.git
+chmod +x env2yaml.sh
+./env2yaml.sh <env-file>
 ```
