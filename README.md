@@ -2,15 +2,15 @@
 
 Convert `.env` files into Kubernetes `ConfigMap` or `Secret` YAML directly from your terminal.
 
-## Screenshot
+## 📸 Screenshot
 
-![ENV2YAML Screenshot](https://raw.githubusercontent.com/virsuryaircas/env2yaml/cli/en2yaml-sh-screenshot.png)
+![ENV2YAML CLI Screenshot](https://raw.githubusercontent.com/virsuryaircas/env2yaml/cli/env2yaml-sh-screenshot.png)
 
 Generate:
 - ConfigMap YAML
 - Secret YAML
 
-## Features
+## ✨ Features
 
 - Interactive terminal UI
 - Zero dependencies
@@ -18,7 +18,7 @@ Generate:
 - Kubernetes-ready output
 - Save time
 
-## Usage
+## 🔧 Usage
 
 ```bash
 git clone https://github.com/virsuryaircas/env2yaml.git
