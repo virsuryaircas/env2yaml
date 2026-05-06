@@ -10,6 +10,7 @@ Generate:
 - ConfigMap YAML
 - Secret YAML
 
+
 ## ✨ Features
 
 - Pure frontend tool
@@ -45,3 +46,6 @@ data:
   APP_PORT: "8080"
   DEBUG: "false"
 ```
+## 📟 Checkout branch CLI
+
+https://github.com/virsuryaircas/env2yaml/tree/cli
