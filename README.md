@@ -2,6 +2,10 @@
 
 Convert `.env` variables into Kubernetes YAML instantly in the browser.
 
+## Screenshot
+
+![ENV2YAML Screenshot](https://raw.githubusercontent.com/virsuryaircas/env2yaml/main/en2yaml-screenshot.png)
+
 Generate:
 - ConfigMap YAML
 - Secret YAML
