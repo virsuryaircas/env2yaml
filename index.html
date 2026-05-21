@@ -3,10 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ENV2YAML</title>
-  <meta name="description" content="Convert .env variables into Kubernetes ConfigMap or Secret YAML instantly in browser">  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/svg+xml" href="k8s-logo.svg">
+  <title>ENV → CM / Secret</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
@@ -32,6 +29,26 @@
       --sans:      'Syne', sans-serif;
       --radius:    10px;
       --radius-lg: 14px;
+      --header-bg: rgba(13,15,20,.85);
+    }
+
+    :root.light {
+      --bg:        #f1f4f9;
+      --surface:   #ffffff;
+      --surface2:  #f0f3f8;
+      --border:    #dde2ed;
+      --border2:   #c8cfde;
+      --accent:    #3b6fd4;
+      --accent-dim:#dce8ff;
+      --amber:     #b97a10;
+      --amber-dim: #fff3d6;
+      --green:     #16a34a;
+      --green-dim: #dcfce7;
+      --red:       #dc2626;
+      --text:      #1e2535;
+      --text2:     #4a5568;
+      --text3:     #8a96aa;
+      --header-bg: rgba(255,255,255,.9);
     }
 
     html, body { height: 100%; }
@@ -59,6 +76,12 @@
       z-index: 0;
     }
 
+    :root.light body::before {
+      background-image:
+        linear-gradient(rgba(59,111,212,.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,111,212,.06) 1px, transparent 1px);
+    }
+
     .app { position: relative; z-index: 1; display: flex; flex-direction: column; min-height: 100vh; }
 
     /* ── Header ── */
@@ -68,7 +91,7 @@
       justify-content: space-between;
       padding: 18px 32px;
       border-bottom: 1px solid var(--border);
-      background: rgba(13,15,20,.85);
+      background: var(--header-bg);
       backdrop-filter: blur(12px);
       position: sticky;
       top: 0;
@@ -117,6 +140,29 @@
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+
+    /* ── Theme Toggle ── */
+    .theme-btn {
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: 1px solid var(--border2);
+      background: var(--surface);
+      color: var(--text2);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .theme-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+      border-color: var(--accent);
     }
 
     /* ── Mode Toggle ── */
@@ -385,6 +431,12 @@
     .y-kw      { color: #c084fc; }
     .y-num     { color: var(--amber); }
 
+    :root.light .y-key  { color: #1d4ed8; }
+    :root.light .y-val  { color: #15803d; }
+    :root.light .y-str  { color: #92400e; }
+    :root.light .y-kw   { color: #6d28d9; }
+    :root.light .y-num  { color: #b45309; }
+
     /* ── Footer ── */
     footer {
       padding: 10px 32px;
@@ -490,6 +542,7 @@
       </div>
     </div>
     <div class="header-right">
+      <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle dark/light mode">🌙</button>
       <div class="mode-toggle">
         <button class="mode-btn active-cm" id="btnCM" onclick="setMode('configmap')">ConfigMap</button>
         <button class="mode-btn" id="btnSecret" onclick="setMode('secret')">Secret</button>
@@ -553,6 +606,7 @@
         <div class="panel-title" id="outputTitle">
           <span class="dot dot-blue"></span>
           ConfigMap YAML
+          <span class="count-pill" id="varCountOut">0 vars</span>
         </div>
         <div class="panel-actions">
           <button class="action-btn" id="copyBtn" onclick="copyYaml()">
@@ -593,6 +647,13 @@
 <script>
   let mode = 'configmap';
   let lastYaml = '';
+  let isLight = false;
+
+  function toggleTheme() {
+    isLight = !isLight;
+    document.documentElement.classList.toggle('light', isLight);
+    document.getElementById('themeBtn').textContent = isLight ? '☀️' : '🌙';
+  }
 
   function setMode(m) {
     mode = m;
@@ -606,9 +667,12 @@
 
     const dot = document.querySelector('#outputTitle .dot');
     dot.className = 'dot ' + (m === 'configmap' ? 'dot-blue' : 'dot-amber');
+    const savedPill = document.getElementById('varCountOut');
+    const savedPillHTML = savedPill ? savedPill.outerHTML : '<span class="count-pill" id="varCountOut">0 vars</span>';
     document.querySelector('#outputTitle').innerHTML =
       `<span class="dot ${m === 'configmap' ? 'dot-blue' : 'dot-amber'}"></span>` +
-      (m === 'configmap' ? 'ConfigMap YAML' : 'Secret YAML');
+      (m === 'configmap' ? 'ConfigMap YAML' : 'Secret YAML') + ' ' +
+      savedPillHTML;
 
     generate();
   }
@@ -636,11 +700,7 @@
   }
 
   function needsQuote(val) {
-    return val === '' ||
-      /[:#\{\}\[\],&*?|\-<>=!%@`]/.test(val) ||
-      /^\s/.test(val) || /\s$/.test(val) ||
-      val.toLowerCase() === 'true' || val.toLowerCase() === 'false' ||
-      /^\d+$/.test(val);
+    return true; // Always quote all values in ConfigMap
   }
 
   function buildConfigMap(vars, name, ns) {
@@ -713,10 +773,15 @@
     const st   = document.getElementById('secretType').value.trim();
     const vars = parseEnv(raw);
 
-    // Count pill
+    // Count pill (both sides)
     const pill = document.getElementById('varCount');
-    pill.textContent = vars.length + (vars.length === 1 ? ' var' : ' vars');
-    pill.className = 'count-pill' + (vars.length > 0 ? ' has-vars' : '');
+    const pillOut = document.getElementById('varCountOut');
+    const countLabel = vars.length + (vars.length === 1 ? ' var' : ' vars');
+    const pillClass = 'count-pill' + (vars.length > 0 ? ' has-vars' : '');
+    pill.textContent = countLabel;
+    pill.className = pillClass;
+    pillOut.textContent = countLabel;
+    pillOut.className = pillClass;
 
     if (!raw.trim()) {
       document.getElementById('emptyState').style.display = 'flex';
