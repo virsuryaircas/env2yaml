@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ENV → CM / Secret</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0f14;
+      --surface:   #13161e;
+      --surface2:  #1a1e28;
+      --border:    #252a38;
+      --border2:   #2e3547;
+      --accent:    #5b8ef0;
+      --accent-dim:#2a3d6e;
+      --amber:     #f0a94a;
+      --amber-dim: #3d2c10;
+      --green:     #4ade80;
+      --green-dim: #0f2d1c;
+      --red:       #f87171;
+      --text:      #e2e8f0;
+      --text2:     #94a3b8;
+      --text3:     #475569;
+      --mono:      'JetBrains Mono', monospace;
+      --sans:      'Syne', sans-serif;
+      --radius:    10px;
+      --radius-lg: 14px;
+      --header-bg: rgba(13,15,20,.85);
+    }
+
+    :root.light {
+      --bg:        #f1f4f9;
+      --surface:   #ffffff;
+      --surface2:  #f0f3f8;
+      --border:    #dde2ed;
+      --border2:   #c8cfde;
+      --accent:    #3b6fd4;
+      --accent-dim:#dce8ff;
+      --amber:     #b97a10;
+      --amber-dim: #fff3d6;
+      --green:     #16a34a;
+      --green-dim: #dcfce7;
+      --red:       #dc2626;
+      --text:      #1e2535;
+      --text2:     #4a5568;
+      --text3:     #8a96aa;
+      --header-bg: rgba(255,255,255,.9);
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Subtle grid bg ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(91,142,240,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(91,142,240,.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    :root.light body::before {
+      background-image:
+        linear-gradient(rgba(59,111,212,.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,111,212,.06) 1px, transparent 1px);
+    }
+
+    .app { position: relative; z-index: 1; display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 32px;
+      border-bottom: 1px solid var(--border);
+      background: var(--header-bg);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .logo-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .logo-text strong {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--text);
+    }
+
+    .logo-text span {
+      font-size: 11px;
+      color: var(--text3);
+      font-weight: 400;
+      letter-spacing: 0.04em;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── Theme Toggle ── */
+    .theme-btn {
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: 1px solid var(--border2);
+      background: var(--surface);
+      color: var(--text2);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .theme-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    /* ── Mode Toggle ── */
+    .mode-toggle {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .mode-btn {
+      padding: 6px 16px;
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: transparent;
+      color: var(--text2);
+      letter-spacing: 0.04em;
+    }
+
+    .mode-btn.active-cm {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .mode-btn.active-secret {
+      background: var(--amber-dim);
+      color: var(--amber);
+    }
+
+    /* ── Meta bar ── */
+    .meta-bar {
+      display: flex;
+      gap: 10px;
+      padding: 14px 32px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-wrap: wrap;
+    }
+
+    .meta-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .meta-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text3);
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+      text-transform: uppercase;
+    }
+
+    .meta-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      padding: 7px 11px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .meta-input:focus {
+      border-color: var(--accent);
+    }
+
+    .meta-input::placeholder { color: var(--text3); }
+
+    /* ── Main columns ── */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .panel:last-child { border-right: none; }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text2);
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .dot-blue  { background: var(--accent); }
+    .dot-amber { background: var(--amber); }
+
+    .panel-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .count-pill {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--text3);
+      transition: all 0.2s;
+    }
+
+    .count-pill.has-vars {
+      background: var(--accent-dim);
+      border-color: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .icon-btn {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--text3);
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+
+    .icon-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+      border-color: var(--border2);
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 7px;
+      border: 1px solid var(--border2);
+      background: var(--surface2);
+      color: var(--text2);
+      cursor: pointer;
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      transition: all 0.15s;
+    }
+
+    .action-btn:hover {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-color: var(--accent-dim);
+    }
+
+    .action-btn.success {
+      background: var(--green-dim);
+      color: var(--green);
+      border-color: var(--green-dim);
+    }
+
+    /* ── Textarea ── */
+    .env-textarea {
+      flex: 1;
+      width: 100%;
+      background: var(--bg);
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text);
+      padding: 20px 24px;
+      caret-color: var(--accent);
+    }
+
+    .env-textarea::placeholder {
+      color: var(--text3);
+      font-style: italic;
+    }
+
+    /* ── Output ── */
+    .output-wrap {
+      flex: 1;
+      overflow: auto;
+      background: var(--bg);
+      padding: 20px 24px;
+      min-height: 0;
+    }
+
+    .empty-state {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--text3);
+    }
+
+    .empty-icon {
+      font-size: 36px;
+      opacity: 0.3;
+    }
+
+    .empty-state p { font-size: 13px; }
+    .empty-state small { font-size: 11px; opacity: 0.6; }
+
+    pre#yamlOut {
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.75;
+      white-space: pre;
+      color: var(--text);
+    }
+
+    /* ── Syntax colors ── */
+    .y-comment { color: var(--text3); font-style: italic; }
+    .y-key     { color: #93c5fd; }
+    .y-colon   { color: var(--text3); }
+    .y-val     { color: #86efac; }
+    .y-str     { color: #fcd34d; }
+    .y-kw      { color: #c084fc; }
+    .y-num     { color: var(--amber); }
+
+    :root.light .y-key  { color: #1d4ed8; }
+    :root.light .y-val  { color: #15803d; }
+    :root.light .y-str  { color: #92400e; }
+    :root.light .y-kw   { color: #6d28d9; }
+    :root.light .y-num  { color: #b45309; }
+
+    /* ── Footer ── */
+    footer {
+      padding: 10px 32px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text3);
+      flex-shrink: 0;
+    }
+
+    .footer-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text3);
+    }
+
+    .status-dot.active { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-family: var(--sans);
+      font-weight: 500;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.25s ease;
+      pointer-events: none;
+      z-index: 100;
+      box-shadow: 0 4px 24px rgba(0,0,0,.5);
+    }
+
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ── Sample btn ── */
+    .sample-hint {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text3);
+      padding: 8px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+
+    .sample-link {
+      color: var(--accent);
+      cursor: pointer;
+      font-weight: 600;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+
+    .sample-link:hover { opacity: 0.75; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+    @media (max-width: 760px) {
+      .main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+      .panel { border-right: none; border-bottom: 1px solid var(--border); }
+      header { padding: 14px 16px; }
+      .meta-bar { padding: 10px 16px; }
+      footer { padding: 8px 16px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⚙️</div>
+      <div class="logo-text">
+        <strong>ENV → CM / Secret</strong>
+        <span>Kubernetes YAML Generator</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle dark/light mode">🌙</button>
+      <div class="mode-toggle">
+        <button class="mode-btn active-cm" id="btnCM" onclick="setMode('configmap')">ConfigMap</button>
+        <button class="mode-btn" id="btnSecret" onclick="setMode('secret')">Secret</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Meta bar -->
+  <div class="meta-bar">
+    <div class="meta-field">
+      <span class="meta-label">Name</span>
+      <input class="meta-input" id="resName" placeholder="my-app-config" oninput="generate()" />
+    </div>
+    <div class="meta-field">
+      <span class="meta-label">Namespace</span>
+      <input class="meta-input" id="ns" placeholder="default" oninput="generate()" />
+    </div>
+    <div class="meta-field" id="secretTypeWrap" style="display:none;">
+      <span class="meta-label">Type</span>
+      <input class="meta-input" id="secretType" placeholder="Opaque" oninput="generate()" />
+    </div>
+  </div>
+
+  <!-- Two panels -->
+  <div class="main">
+
+    <!-- Left: Input -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="dot dot-blue"></span>
+          ENV Variables
+          <span class="count-pill" id="varCount">0 vars</span>
+        </div>
+        <div class="panel-actions">
+          <button class="action-btn" id="pasteBtn" onclick="pasteEnv()">
+            📋 Paste
+          </button>
+          <button class="action-btn" onclick="document.getElementById('fileUpload').click()">
+            ⬆ Upload .env
+          </button>
+          <input type="file" id="fileUpload" accept=".env,text/plain" style="display:none;" onchange="handleUpload(event)" />
+          <button class="icon-btn" title="Clear all" onclick="clearAll()">✕</button>
+        </div>
+      </div>
+      <textarea
+        class="env-textarea"
+        id="envInput"
+        placeholder="Paste your .env file here…&#10;&#10;DB_HOST=localhost&#10;DB_PORT=5432&#10;API_KEY=your-secret-key&#10;APP_ENV=production&#10;&#10;# Comments are ignored"
+        oninput="generate()"
+        spellcheck="false"
+      ></textarea>
+      <div class="sample-hint">
+        💡 Try it —&nbsp;<span class="sample-link" onclick="loadSample()">load sample .env</span>
+      </div>
+    </div>
+
+    <!-- Right: Output -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title" id="outputTitle">
+          <span class="dot dot-blue"></span>
+          ConfigMap YAML
+          <span class="count-pill" id="varCountOut">0 vars</span>
+        </div>
+        <div class="panel-actions">
+          <button class="action-btn" id="copyBtn" onclick="copyYaml()">
+            📋 Copy
+          </button>
+          <button class="action-btn" onclick="downloadYaml()">
+            ⬇ Download
+          </button>
+        </div>
+      </div>
+      <div class="output-wrap" id="outputWrap">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">⟵</div>
+          <p>Paste ENV variables on the left</p>
+          <small>YAML will auto-generate here</small>
+        </div>
+        <pre id="yamlOut" style="display:none;"></pre>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div style="display:flex; align-items:center; justify-content:center; width:100%; gap:8px;">
+      <span style="display:inline-flex; align-items:center; gap:7px; background:rgba(74,222,128,0.08); border:1px solid rgba(74,222,128,0.2); border-radius:99px; padding:5px 14px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#4ade80; flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span style="color:#4ade80; font-size:11px; font-weight:700; letter-spacing:0.06em;">100% LOCAL</span>
+        <span style="width:1px; height:10px; background:rgba(74,222,128,0.25);"></span>
+        <span style="color:#94a3b8; font-size:11px; font-weight:500;">Your data never leaves this tab — runs entirely in your browser, nothing sent to any server.</span>
+      </span>
+    </div>
+  </footer>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  let mode = 'configmap';
+  let lastYaml = '';
+  let isLight = false;
+
+  function toggleTheme() {
+    isLight = !isLight;
+    document.documentElement.classList.toggle('light', isLight);
+    document.getElementById('themeBtn').textContent = isLight ? '☀️' : '🌙';
+  }
+
+  function setMode(m) {
+    mode = m;
+    const cm = document.getElementById('btnCM');
+    const sec = document.getElementById('btnSecret');
+    const stWrap = document.getElementById('secretTypeWrap');
+
+    cm.className = 'mode-btn' + (m === 'configmap' ? ' active-cm' : '');
+    sec.className = 'mode-btn' + (m === 'secret' ? ' active-secret' : '');
+    stWrap.style.display = m === 'secret' ? 'flex' : 'none';
+
+    const dot = document.querySelector('#outputTitle .dot');
+    dot.className = 'dot ' + (m === 'configmap' ? 'dot-blue' : 'dot-amber');
+    const savedPill = document.getElementById('varCountOut');
+    const savedPillHTML = savedPill ? savedPill.outerHTML : '<span class="count-pill" id="varCountOut">0 vars</span>';
+    document.querySelector('#outputTitle').innerHTML =
+      `<span class="dot ${m === 'configmap' ? 'dot-blue' : 'dot-amber'}"></span>` +
+      (m === 'configmap' ? 'ConfigMap YAML' : 'Secret YAML') + ' ' +
+      savedPillHTML;
+
+    generate();
+  }
+
+  function parseEnv(text) {
+    return text.split('\n').reduce((acc, line) => {
+      line = line.trim();
+      if (!line || line.startsWith('#')) return acc;
+      const idx = line.indexOf('=');
+      if (idx < 1) return acc;
+      let key = line.slice(0, idx).trim();
+      let val = line.slice(idx + 1).trim();
+      if (
+        (val.startsWith('"') && val.endsWith('"')) ||
+        (val.startsWith("'") && val.endsWith("'"))
+      ) val = val.slice(1, -1);
+      if (key) acc.push({ key, val });
+      return acc;
+    }, []);
+  }
+
+  function toBase64(str) {
+    try { return btoa(unescape(encodeURIComponent(str))); }
+    catch { return btoa(str); }
+  }
+
+  function needsQuote(val) {
+    return true; // Always quote all values in ConfigMap
+  }
+
+  function buildConfigMap(vars, name, ns) {
+    const n = name || 'my-configmap';
+    const namespace = ns || 'default';
+    let out = `apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: ${n}\n  namespace: ${namespace}\ndata:\n`;
+    if (!vars.length) return out + '  # no variables defined\n';
+    for (const { key, val } of vars) {
+      const q = needsQuote(val);
+      out += `  ${key}: ${q ? '"' + val.replace(/"/g, '\\"') + '"' : val}\n`;
+    }
+    return out;
+  }
+
+  function buildSecret(vars, name, ns, type) {
+    const n = name || 'my-secret';
+    const namespace = ns || 'default';
+    const t = type || 'Opaque';
+    let out = `apiVersion: v1\nkind: Secret\nmetadata:\n  name: ${n}\n  namespace: ${namespace}\ntype: ${t}\ndata:\n`;
+    if (!vars.length) return out + '  # no variables defined\n';
+    for (const { key, val } of vars) {
+      out += `  ${key}: ${toBase64(val)}\n`;
+    }
+    return out;
+  }
+
+  function highlight(yaml) {
+    return yaml.split('\n').map(line => {
+      if (line.trim().startsWith('#'))
+        return `<span class="y-comment">${esc(line)}</span>`;
+
+      // Handle key: value lines
+      const m = line.match(/^(\s*)([^:]+)(:)(\s*)(.*)$/);
+      if (m) {
+        const [, indent, key, colon, space, val] = m;
+        const topKeys = ['apiVersion','kind','type','data','metadata'];
+        const isTopKey = topKeys.includes(key.trim());
+        const keySpan = isTopKey
+          ? `<span class="y-kw">${esc(key)}</span>`
+          : `<span class="y-key">${esc(key)}</span>`;
+
+        let valSpan = '';
+        if (val) {
+          if (val.startsWith('"') || val.startsWith("'"))
+            valSpan = `<span class="y-str">${esc(val)}</span>`;
+          else if (!isNaN(val.trim()) && val.trim() !== '')
+            valSpan = `<span class="y-num">${esc(val)}</span>`;
+          else if (val.trim() === 'true' || val.trim() === 'false')
+            valSpan = `<span class="y-kw">${esc(val)}</span>`;
+          else
+            valSpan = `<span class="y-val">${esc(val)}</span>`;
+        }
+        return `${esc(indent)}${keySpan}<span class="y-colon">${esc(colon)}</span>${esc(space)}${valSpan}`;
+      }
+      return esc(line);
+    }).join('\n');
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function generate() {
+    const raw  = document.getElementById('envInput').value;
+    const name = document.getElementById('resName').value.trim();
+    const ns   = document.getElementById('ns').value.trim();
+    const st   = document.getElementById('secretType').value.trim();
+    const vars = parseEnv(raw);
+
+    // Count pill (both sides)
+    const pill = document.getElementById('varCount');
+    const pillOut = document.getElementById('varCountOut');
+    const countLabel = vars.length + (vars.length === 1 ? ' var' : ' vars');
+    const pillClass = 'count-pill' + (vars.length > 0 ? ' has-vars' : '');
+    pill.textContent = countLabel;
+    pill.className = pillClass;
+    pillOut.textContent = countLabel;
+    pillOut.className = pillClass;
+
+    if (!raw.trim()) {
+      document.getElementById('emptyState').style.display = 'flex';
+      document.getElementById('yamlOut').style.display = 'none';
+      lastYaml = '';
+      return;
+    }
+
+    const yaml = mode === 'configmap'
+      ? buildConfigMap(vars, name, ns)
+      : buildSecret(vars, name, ns, st);
+
+    lastYaml = yaml;
+    const pre = document.getElementById('yamlOut');
+    pre.innerHTML = highlight(yaml);
+    pre.style.display = 'block';
+    document.getElementById('emptyState').style.display = 'none';
+  }
+
+  function pasteEnv() {
+    navigator.clipboard.readText().then(text => {
+      document.getElementById('envInput').value = text;
+      generate();
+      const btn = document.getElementById('pasteBtn');
+      btn.classList.add('success');
+      btn.textContent = '✓ Pasted!';
+      setTimeout(() => {
+        btn.classList.remove('success');
+        btn.textContent = '📋 Paste';
+      }, 2000);
+    }).catch(() => {
+      showToast('Paste blocked — use Ctrl+V in the textarea', '⚠️');
+    });
+  }
+
+  function handleUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      document.getElementById('envInput').value = e.target.result;
+      if (!document.getElementById('resName').value) {
+        document.getElementById('resName').value = file.name.replace(/\.env.*$/, '') || 'my-app-config';
+      }
+      generate();
+      showToast('Loaded ' + file.name, '📂');
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  }
+
+  function clearAll() {
+    document.getElementById('envInput').value = '';
+    generate();
+  }
+
+  function loadSample() {
+    document.getElementById('envInput').value =
+`#MYAPP
+APP_NAME=my-awesome-app
+APP_ENV=production
+APP_PORT=8080
+DEBUG=false`;
+    document.getElementById('resName').value = 'my-app-config';
+    document.getElementById('ns').value = 'production';
+    generate();
+  }
+
+  function showToast(msg, icon = '✅') {
+    const t = document.getElementById('toast');
+    t.innerHTML = icon + ' ' + msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  function copyYaml() {
+    if (!lastYaml) return;
+    navigator.clipboard.writeText(lastYaml).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.classList.add('success');
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => {
+        btn.classList.remove('success');
+        btn.textContent = '📋 Copy';
+      }, 2000);
+      showToast('YAML copied to clipboard');
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = lastYaml;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('YAML copied!');
+    });
+  }
+
+  function downloadYaml() {
+    if (!lastYaml) { showToast('Nothing to download yet', '⚠️'); return; }
+    const name = (document.getElementById('resName').value.trim() || (mode === 'configmap' ? 'configmap' : 'secret'));
+    const blob = new Blob([lastYaml], { type: 'text/yaml' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name + '.yaml';
+    a.click();
+    showToast('Downloaded ' + name + '.yaml', '⬇️');
+  }
+</script>
+</body>
+</html>
