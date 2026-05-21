@@ -145,13 +145,7 @@ b64() {
 
 # ── Needs quoting? (ConfigMap) ────────────────
 needs_quote() {
-  local v="$1"
-  [[ -z "$v" ]] && return 0
-  [[ "$v" =~ ^[[:space:]] || "$v" =~ [[:space:]]$ ]] && return 0
-  [[ "$v" =~ [:#\{\}\[\],\&\*\?\|\<\>=\!\%\@\`] ]] && return 0
-  [[ "${v,,}" == "true" || "${v,,}" == "false" ]] && return 0
-  [[ "$v" =~ ^[0-9]+$ ]] && return 0
-  return 1
+  return 0  # Always quote all ConfigMap values
 }
 
 # ── Build YAML ────────────────────────────────
